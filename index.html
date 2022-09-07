@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Voting Sim</title>
+</head>
+<body onload="drawCanvas(2000);">
+<canvas width="800" height="800" id="canvas"></canvas><br>
+<button onclick="drawCanvas(2000);">Render (2k)</button>
+<button onclick="drawCanvas(20000);">Render (20k)</button>
+<button onclick="drawCanvas(200000);">Render (200k)</button>
+<button onclick="drawCanvas(2000000);">Render (2m)</button><br>
+<button onclick="setSize(32);">Low-res (32)</button>
+<button onclick="setSize(16);">Low-res (16)</button>
+<button onclick="setSize(8);">Medium-res (8)</button>
+<button onclick="setSize(4);">Medium-res (4)</button>
+<button onclick="setSize(2);">High-res (2)</button>
+<button onclick="setSize(1);">High-res (1)</button>
+
+<script>
+    // let candidates = [[0.5, 0.99], [0.07, 0.25], [0.93, 0.25]];
+    // let candidates = [[0.54, 0.47], [0.77, 0.64], [0.13, 0.10]];
+    // let candidates = [[0.4, 0.4], [0.6, 0.4], [0.4, 0.6], [0.6, 0.6]];
+    // let candidates = [[0.12, 0.28], [0.85, 0.70], [0.39, 0.28], [0.97, 0.14]];
+    // let candidates = [[0.24, 0.23], [0.19, 0.62], [0.04, 0.64], [0.85, 0.55]];
+    // let candidates = [
+    //     [
+    //         0.34875,
+    //         0.33
+    //     ],
+    //     [
+    //         0.39125,
+    //         0.585
+    //     ],
+    //     [
+    //         0.265,
+    //         0.5325
+    //     ],
+    //     [
+    //         0.67,
+    //         0.52625
+    //     ]
+    // ];
+    let candidates = [
+        [
+            0.42125,
+            0.4475
+        ],
+        [
+            0.3975,
+            0.58625
+        ],
+        [
+            0.265,
+            0.5325
+        ],
+        [
+            0.5575,
+            0.49
+        ]
+    ];
+    let colors = ["#FF0000", "#00FF00", "#0000FF", "#FFFF00"];
+
+    var canvas = document.getElementById('canvas');
+    var ctx = canvas.getContext('2d');
+    var canvasWidth = canvas.width;
+    var canvasHeight = canvas.height;
+    ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+    // ctx.fillStyle = "rgba(200, 100, 50, 1)";
+    // ctx.fillRect(50, 60, 1, 1);
+
+    let mouseX = 0;
+    let mouseY = 0;
+    let mouseIsDown = false;
+    let whichCandidateMoved = -1;
+
+    canvas.onmousedown = function (e) {
+        mouseIsDown = true;
+
+        for (let i = 0; i < candidates.length; i++) {
+            // console.log("Distance: " + getDistance([e.x, e.y], [candidates[i][0] * 800, candidates[i][1] * 800]));
+            if (getDistance([e.x, e.y], [candidates[i][0] * 800, candidates[i][1] * 800]) < 20) {
+                whichCandidateMoved = i;
+            }
+        }
+    }
+
+    canvas.oncontextmenu = function (e) {
+        let candidateToDelete = -1;
+
+        for (let i = 0; i < candidates.length; i++) {
+            // console.log("Distance: " + getDistance([e.x, e.y], [candidates[i][0] * 800, candidates[i][1] * 800]));
+            if (getDistance([e.x, e.y], [candidates[i][0] * 800, candidates[i][1] * 800]) < 20) {
+                candidateToDelete = i;
+                break;
+            }
+        }
+
+        if (candidateToDelete > -1) {
+            candidates.splice(candidateToDelete, 1);
+        }
+
+        return false;
+    }
+
+    canvas.onmouseup = function (e) {
+        if (mouseIsDown) mouseClick(e);
+
+        drawCanvas(2000);
+
+        whichCandidateMoved = -1;
+        mouseIsDown = false;
+    }
+
+    canvas.onmousemove = function (e) {
+        if (!mouseIsDown) return;
+
+        let candidate = candidates[whichCandidateMoved];
+        candidate[0] = e.x / 800;
+        candidate[1] = e.y / 800;
+        ctx.beginPath();
+        ctx.arc(candidate[0] * 800 - 5, candidate[1] * 800 - 5, 10, 0, 2 * Math.PI, false);
+        ctx.fillStyle = colors[whichCandidateMoved];
+        ctx.fill();
+        ctx.lineWidth = 5;
+        ctx.strokeStyle = '#003300';
+        ctx.stroke();
+
+        return false;
+    }
+
+    function mouseClick(e) {
+        // click action
+    }
+
+    function render() {
+        drawCanvas(2000);
+    }
+
+    function setSize(n) {
+        size = n;
+    }
+
+    function randn_bm(min, max, skew) {
+        /**
+         * Samples from a normal distribution.
+         * From https://stackoverflow.com/a/49434653
+         * @type {number}
+         */
+        let u = 0, v = 0;
+        while (u === 0) u = Math.random() //Converting [0,1) to (0,1)
+        while (v === 0) v = Math.random()
+        let num = Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v)
+
+        num = num / 10.0 + 0.5 // Translate to 0 -> 1
+        if (num > 1 || num < 0)
+            num = randn_bm(min, max, skew) // resample between 0 and 1 if out of range
+
+        else {
+            num = Math.pow(num, skew) // Skew
+            num *= max - min // Stretch to fill range
+            num += min // offset to min
+        }
+        return num
+    }
+
+    let size = 16;
+
+    function drawCanvas(numVoters) {
+        for (let i = 0; i < 800; i += size) {
+            for (let j = 0; j < 800; j += size) {
+                let x = parseFloat((i / 800).toFixed(2));
+                let y = parseFloat((j / 800).toFixed(2));
+
+                let result = irv(x, y, numVoters);
+                // console.log("result: " + result);
+                ctx.fillStyle = colors[result];
+                ctx.fillRect(i, j, size, size);
+            }
+        }
+
+        for (let i = 0; i < candidates.length; i++) {
+            let candidate = candidates[i];
+            ctx.beginPath();
+            ctx.arc(candidate[0] * 800, candidate[1] * 800, 10, 0, 2 * Math.PI, false);
+            ctx.fillStyle = colors[i];
+            ctx.fill();
+            ctx.lineWidth = 5;
+            ctx.strokeStyle = '#003300';
+            ctx.stroke();
+        }
+
+        window.alert("Done rendering!");
+    }
+
+    function getDistance(a, b) {
+        return Math.sqrt((a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2);
+    }
+
+    function isWinner(votes) {
+        // winner in IRV if there's a majority
+        let total = votes.reduce((a, b) => a + b, 0);
+
+        for (let i = 0; i < votes.length; i++) {
+            if (votes[i] / total > 0.5) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    function getWinner(votes) {
+        // winner in IRV if there's a majority
+        let total = votes.reduce((a, b) => a + b, 0);
+
+        for (let i = 0; i < votes.length; i++) {
+            if (votes[i] / total > 0.5) {
+                return i;
+            }
+        }
+
+        return -1;
+    }
+
+    function irv(x, y, numVoters) {
+        // Select 200k voters around this point
+        let voters = [];
+
+        let range = 1.5;
+
+        for (let i = 0; i < numVoters; i++) {
+            voters.push([randn_bm(x - range, x + range, 1), randn_bm(y - range, y + range, 1)])
+        }
+
+        // Get all the ballots
+        let ballots = []
+
+        for (const voter of voters) {
+            let ballot = [];
+
+            let distances = [];
+
+            for (const candidate of candidates) {
+                let distance = getDistance(voter, candidate);
+                distances.push(distance);
+            }
+
+            for (let i = 0; i < candidates.length; i++) {
+                let minIndex = distances.reduce((iMin, x, i, arr) => x < arr[iMin] ? i : iMin, 0);
+                ballot.push(minIndex);
+                distances[minIndex] = 20; // max distance is sqrt(2)
+            }
+
+            ballots.push(ballot);
+        }
+
+        // Calculate the winner
+        let votes = new Array(candidates.length).fill(0);
+
+        // Give everyone their first choice votes
+        for (const ballot of ballots) {
+            let candidate = ballot[0];
+            votes[candidate]++;
+        }
+
+        // console.log("Votes after first round: " + votes);
+
+        let numRunoffs = 0;
+
+        // Instant runoff!
+        while (!isWinner(votes)) {
+            numRunoffs++;
+
+            if (numRunoffs > 3) {
+                console.log("uh-oh");
+            }
+
+            // console.log("RUNOFF!!!!!!!");
+
+            // Get the worst candidate
+            let worstCandidate = 0;
+            let worstCandidateVotes = 10000000000;
+
+            for (let i = 0; i < candidates.length; i++) {
+                if (votes[i] < worstCandidateVotes && votes[i] > 0) {
+                    worstCandidate = i;
+                    worstCandidateVotes = votes[i];
+                }
+            }
+
+            // Redistribute their votes to the second choices
+            votes[worstCandidate] = 0;
+
+            for (const ballot of ballots) {
+                if (ballot[0] === worstCandidate) {
+                    let nextBest = 1;
+
+                    while (votes[ballot[nextBest]] === 0) {
+                        nextBest++;
+                    }
+
+                    votes[ballot[nextBest]]++;
+                }
+            }
+        }
+
+        // Get the winner
+        return getWinner(votes);
+    }
+</script>
+</body>
+</html>
